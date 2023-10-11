@@ -1,42 +1,68 @@
 <?php
+
 use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-if(isset($_POST['name']) && isset($_POST['email'])){
-      $name = $_POST['name'];
+require_once "PHPMailer/PHPMailer.php";
+require_once "PHPMailer/SMTP.php";
+require_once "PHPMailer/Exception.php";
+
+$name = $_POST['name'] ?? '';
+$email = $_POST['email'] ?? '';
+$subject = $_POST['subject'] ?? '';
+$body = $_POST['body'] ?? '';
+
+if (isset($_POST['email'])) {
       $email = $_POST['email'];
-      $subject = $_POST['subject'];
-      $body = $_POST['body'];
-
-
-      require_once "../phpmailer/src/PHPMailer.php";
-      require_once "../phpmailer/src/SMTP.php";
-      require_once "../phpmailer/src/Exception.php";
-
-      $mail = new PHPMailer();
-
-      //smtp settings
-      $mail->isSMTP();
-      $mail->Host = "smtp.gmail.com";
-      $mail->SMTPAuth = true;
-      $mail->Username = 'komilovsg@gmail.com';
-      $mail->Password = 'yegexhnsmwinymqu';
-      $mail->SMTPSecure = "ssl";
-      $mail->Port = 465;
-
-      $mail->isHTML(true); 
-      $mail->setFrom($email, $name);
-      $mail->addAddress('komilovsg@gmail.com'); // Add a recipient
-      $mail->Subject = ("$email ($subject)");
-      $mail->Body = $body;
-
-      if($mail->send()){
-            $status = "seccess";
-            $response = "Email is sent!";
+  
+      // Проверка на пустоту
+      if (empty($email)) {
+          // Обработка случая, когда адрес электронной почты пустой
+          echo json_encode(array('status' => 'failed', 'response' => 'ERROR - Email address is empty'));
+          exit(); // Прекращение выполнения скрипта
       }
-      else {
-            $status = "failed";
-            $response = "ERROR - Something is wrong: <br>" .$mail->ErrorInfo;
+  
+      // Валидация адреса электронной почты
+      if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+          // Обработка случая, когда адрес электронной почты некорректен
+          echo json_encode(array('status' => 'failed', 'response' => 'ERROR - Invalid email address'));
+          exit(); // Прекращение выполнения скрипта
       }
+  } else {
+      // Обработка случая, когда ключ 'email' отсутствует в массиве $_POST
+      echo json_encode(array('status' => 'failed', 'response' => 'ERROR - Email address not provided'));
+      exit(); // Прекращение выполнения скрипта
+  }
 
-      exit(json_encode(array("status" => $status, "response" => $response)));
+
+
+
+$mail = new PHPMailer(true);
+
+try {
+    // SMTP settings
+    $mail->isSMTP();
+    $mail->Host = "smtp.gmail.com";
+    $mail->SMTPAuth = true;
+    $mail->Username = 'komilovsg@gmail.com';
+    $mail->Password = 'yegexhnsmwinymqu';
+    $mail->SMTPSecure = "ssl";
+    $mail->Port = 465;
+
+    $mail->setFrom($email, $name);
+    $mail->addAddress('komilovsg@gmail.com');
+    $mail->isHTML(true);
+    $mail->Subject = "$email ($subject)";
+    $mail->Body = $body;
+
+    $mail->send();
+
+    $status = "success";
+    $response = "Email is sent!";
+} catch (Exception $e) {
+    $status = "failed";
+    $response = "ERROR - Something went wrong: <br>" . $mail->ErrorInfo;
 }
+
+echo json_encode(array("status" => $status, "response" => $response));
+?>
